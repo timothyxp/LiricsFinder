@@ -8,7 +8,8 @@ from collections import Counter
 
 @dataclass
 class SearchAnswer:
-    documents: List[int]
+    documents: List[str]
+    # documents path
 
 
 class Searcher:
