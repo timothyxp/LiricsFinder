@@ -1,0 +1,7 @@
+torch==1.12.1
+bs4==0.0.1
+requests==2.23.0
+aiogram
+pandas
+lxml
+pymorphy2
