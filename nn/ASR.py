@@ -2,7 +2,6 @@ from .base import ASRBase
 import os
 import re
 from transformers import pipeline  # нужно скачать
-import subprocess
 
 
 class ASR(ASRBase):
