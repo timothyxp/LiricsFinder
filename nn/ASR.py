@@ -23,9 +23,8 @@ class ASR(ASRBase):
 
 # example
 
-'''
+
 if __name__ == "__main__":
     asr = ASR()
 
-    print(asr.find())
-'''
+    print(asr.transcribe("z1.m4a"))
