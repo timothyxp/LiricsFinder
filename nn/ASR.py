@@ -18,6 +18,7 @@ class ASR(ASRBase):
         text = self.pipe(new_file)["text"]
         text.lower()
         text = re.sub(r'[.,"\'\-?:!;]', '', text)
+        os.remove(new_file)
         return text
 
 
