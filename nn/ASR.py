@@ -1,7 +1,7 @@
 from .base import ASRBase
 import os
 import re
-from transformers import pipeline  # нужно скачать
+from transformers import pipeline
 
 
 class ASR(ASRBase):
