@@ -17,7 +17,7 @@ class ASR(ASRBase):
             return "error second"
         text = self.pipe(new_file)["text"]
         text.lower()
-        text = re.sub(r'[.,"\'-?:!;]', '', text)
+        text = re.sub(r'[.,"\'\-?:!;]', '', text)
         return text
 
 
