@@ -1,0 +1,32 @@
+from .base import ASRBase
+import os
+import re
+from transformers import pipeline  # нужно скачать
+import subprocess
+
+
+class ASR(ASRBase):
+    def __init__(self):
+        super().__init__()
+        self.pipe = pipeline(model="openai/whisper-base")
+
+    def transcribe(self, audio_file: str) -> str:
+        new_file = audio_file[:-4] + "_changed.wav"
+        ret = os.system("ffmpeg -i " + audio_file + " -ar 16000 -ac 1 -t 00:00:30 " + new_file)
+        if not ret:
+            print("Ffmpeg convert error")
+            return "error second"
+        text = self.pipe(new_file)["text"]
+        text.lower()
+        text = re.sub(r'[.,"\'-?:!;]', '', text)
+        return text
+
+
+# example
+
+'''
+if __name__ == "__main__":
+    asr = ASR()
+
+    print(asr.find())
+'''
