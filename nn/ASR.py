@@ -12,7 +12,7 @@ class ASR(ASRBase):
     def transcribe(self, audio_file: str) -> str:
         new_file = audio_file[:-4] + "_changed.wav"
         ret = os.system("ffmpeg -i " + audio_file + " -ar 16000 -ac 1 -t 00:00:30 " + new_file)
-        if not ret:
+        if ret:
             print("Ffmpeg convert error")
             return "error second"
         text = self.pipe(new_file)["text"]
