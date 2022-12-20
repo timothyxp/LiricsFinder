@@ -7,7 +7,7 @@ import nltk
 from collections import defaultdict
 from math import log
 import json
-from random import randint
+from projectUtils import read_song_csv
 
 cntFall = 0
 
@@ -106,7 +106,7 @@ class Searcher(BaseSearcher):
 
                     try:
                         path_to_song = os.path.join(self.base_path, letter, author, song)
-                        song_csv = pd.read_csv(path_to_song, sep='ÿ', engine='python', quoting=3)
+                        song_csv = read_song_csv(path_to_song)
 
                         sentance = ' '.join(song_csv['eng'].astype(str))
                         words = self._tokenize(sentance)
