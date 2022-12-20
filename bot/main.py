@@ -4,6 +4,7 @@ from text_base.search_getter import get_searcher
 from aiogram import Bot, Dispatcher, executor, types
 from nn.ASR_getter import get_asr
 from datetime import datetime
+import pandas as pd
 
 config = None
 token_path = "token.txt"
@@ -20,6 +21,8 @@ config = Config(
     index_path=args.index_path,
     test=args.test
 )
+error_audio = "Извините, это аудио не может быть обработано"
+error_document = "Извините, этот документ не может быть обработан"
 searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
@@ -45,14 +48,30 @@ sticker_SearchAnswer = [sticker_SenyaMusic,
                         sticker_SenyaMinigun]
 
 
+async def handle_voice(message: types.Message, func, error_message):
+    name = str(datetime.now())
+    name = name[:10] + name[11:]
+    await func(destination_file="./oga/" + name)
+    asr_response = asr.transcribe("./oga/" + name)
+    if asr_response == "-":
+        await message.answer_sticker(sticker_SenyaError)
+        await message.answer(error_message)
+    else:
+        search_response = searcher.find(asr_response).documents
+        await message.answer(asr_response)
+        await message.answer(search_response)
+        await send_text(message, search_response[0])
+
+
 async def help(message: types.Message):
     await message.answer("Если ты мне пришлёшь: \n" \
                          "Текст/аудио-сообщение - получишь наиболее вероятный превод песни\n" \
                          "/top5 - 5 наиболее вероятных переводов предыдущего запроса")
 
 
-async def t(message: types.Message):
-    await message.answer("t")
+async def send_text(message: types.Message, song_path):
+    song = pd.read_csv(song_path, delimiter='ÿ')
+    await message.answer(song)
 
 
 @dp.message_handler(content_types=[types.ContentType.STICKER])
@@ -80,54 +99,24 @@ async def top5(message: types.Message):
 
 @dp.message_handler(content_types=[types.ContentType.VOICE])
 async def voice(message: types.Message):
-    name = str(datetime.now())
-    name = name[:10] + name[11:]
-    await message.voice.download(destination_file="./oga/" + name)
-    asr_response = asr.transcribe("./oga/" + name)
-    if asr_response == "-":
-        await message.answer_sticker(sticker_SenyaError)
-        await message.answer("Извините, это аудио не может быть обработано")
-    else:
-        search_response = searcher.find(asr_response).documents
-        await message.answer(asr_response)
-        await message.answer(search_response)
+    await handle_voice(message, message.voice.download, error_audio)
 
 
 @dp.message_handler(content_types=[types.ContentType.AUDIO])
 async def audio(message: types.Message):
-    name = str(datetime.now())
-    name = name[:10] + name[11:]
-    await message.audio.download(destination_file="./oga/" + name)
-    asr_response = asr.transcribe("./oga/" + name)
-    if asr_response == "-":
-        await message.answer_sticker(sticker_SenyaError)
-        await message.answer("Извините, это аудио не может быть обработано")
-    else:
-        search_response = searcher.find(asr_response).documents
-        await message.answer(asr_response)
-        await message.answer(search_response)
+    await handle_voice(message, message.audio.download, error_audio)
 
-
+    
 @dp.message_handler(content_types=[types.ContentType.DOCUMENT])
-async def audio(message: types.Message):
-    name = str(datetime.now())
-    name = name[:10] + name[11:]
-    await message.document.download(destination_file="./oga/" + name)
-    asr_response = asr.transcribe("./oga/" + name)
-    if asr_response == "-":
-        await message.answer_sticker(sticker_SenyaError)
-        await message.answer("Извините, этот документ не может быть обработан")
-    else:
-        search_response = searcher.find(asr_response).documents
-        await message.answer(asr_response)
-        await message.answer(search_response)
+async def document(message: types.Message):
+    await handle_voice(message, message.document.download, error_document)
 
 
 @dp.message_handler()
 async def text(message: types.Message):
-    text_response = message.text()
+    text_response = message.text
     search_response = searcher.find(text_response).documents
-    await message.answer(search_response)
+    await send_text(message, search_response[0])
 
 
 if __name__ == "__main__":
