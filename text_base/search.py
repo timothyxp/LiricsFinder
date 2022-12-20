@@ -36,9 +36,6 @@ class Searcher(BaseSearcher):
         self.tempList = list()
         self.create_structure()
 
-    def _get_tf(self, t, id):
-        return self._amount_word[id][t] / self._total_amount_words[id]
-
     def _calc_idf(self):
         N = len(self._amount_word)
         for word, amount in self._df.items():
@@ -46,6 +43,13 @@ class Searcher(BaseSearcher):
         terms = list(sorted(self._df.items(), key=lambda x: x[1], reverse=True))
         for i in range(self.top_k):
             self.top_terms.append(terms[i][0])
+
+    def _get_tf(self, t, id):
+        tf = self._amount_word[id][t]
+        return tf / (tf + 2)
+
+    def _get_tf_idf(self, t, id):
+        return self._get_tf(t, id) * self.idf_index[t]
 
     def _tokenize(self, s):
         try:
@@ -56,16 +60,6 @@ class Searcher(BaseSearcher):
             return striped_word_list
         except:
             return ""
-
-    def _process_words(self, words, id):
-        self._total_amount_words[id] = len(words)
-        count_words = defaultdict(int)
-        for word in words:
-            count_words[word] += 1
-        for word, amount in count_words.items():
-            self.tf_index[word].append((id, amount))
-            self._df[word] = self._df[word] + amount
-            self._amount_word[id][word] += amount
 
     def create_structure(self):
         """
@@ -116,8 +110,6 @@ class Searcher(BaseSearcher):
         json.dump(self.tf_index, open("text_base/data/tf_index.json", 'w'))
         json.dump(self._df, open("text_base/data/_df.json", 'w'))
 
-    def _get_tf_idf(self, t, id):
-        return self._get_tf(t, id) * self.idf_index[t]
 
     def find(self, query) -> SearchAnswer:
         words = self._tokenize(query)
