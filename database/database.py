@@ -8,10 +8,10 @@ class DataBase:
         self.user = Query()
 
     def save_log(self, user_id, chat_id, text, is_audio, is_file, command, result):
-        dt = datetime.now()
-        dt_str = datetime.strptime(str(dt)[:-7], '%Y-%m-%d %H:%M:%S')
+        dt = str(datetime.now())[:-7]
+        #dt_str = datetime.strptime(str(dt)[:-7], '%Y-%m-%d %H:%M:%S') get datetime
         self.db.insert({'user_id': user_id, 'chat_id': chat_id, 'text': text, 'is_audio': is_audio, 'is_file': is_file,\
-                        'command': command, 'result': result, 'date_time': dt_str})
+                        'command': command, 'result': result, 'date_time': dt})
 
     def get_user_story(self, user_id):
         return self.db.search(self.user.user_id == user_id)
