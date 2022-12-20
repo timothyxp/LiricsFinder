@@ -68,17 +68,20 @@ class Searcher(BaseSearcher):
         """
         os.makedirs("text_base/data", exist_ok=True)
         if os.path.exists('text_base/data/top_terms.json'):
-            self.top_terms = json.load(open("text_base/data/top_terms.json"))
-            for id, path in json.load(open("text_base/data/_id_song.json")).items():
-                self._id_song[id] = path
-            for word, idf in json.load(open("text_base/data/idf_index.json")).items():
-                self.idf_index[word] = idf
-            for id, dict in json.load(open("text_base/data/_amount_word.json")).items():
-                for word, amount in dict.items():
-                    self._amount_word[id][word] = amount
-            for word, amount in json.load(open("text_base/data/_total_amount_words.json")).items():
-                self._total_amount_words[word] = amount
-            return
+            try:
+                self.top_terms = json.load(open("text_base/data/top_terms.json"))
+                for id, path in json.load(open("text_base/data/_id_song.json")).items():
+                    self._id_song[id] = path
+                for word, idf in json.load(open("text_base/data/idf_index.json")).items():
+                    self.idf_index[word] = idf
+                for id, dict in json.load(open("text_base/data/_amount_word.json")).items():
+                    for word, amount in dict.items():
+                        self._amount_word[id][word] = amount
+                for word, amount in json.load(open("text_base/data/_total_amount_words.json")).items():
+                    self._total_amount_words[word] = amount
+                return
+            except:
+                print('FALL_DOWNLOAD')
 
         current_song_id = 0
 
