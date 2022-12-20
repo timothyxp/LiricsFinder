@@ -61,6 +61,16 @@ class Searcher(BaseSearcher):
         except:
             return ""
 
+    def _process_words(self, words, id):
+        self._total_amount_words[id] = len(words)
+        count_words = defaultdict(int)
+        for word in words:
+            count_words[word] += 1
+        for word, amount in count_words.items():
+            self.tf_index[word].append((id, amount))
+            self._df[word] = self._df[word] + amount
+            self._amount_word[id][word] += amount
+
     def create_structure(self):
         """
         Создает индекс документов путь до документа -> номер
