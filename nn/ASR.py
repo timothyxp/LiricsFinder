@@ -14,7 +14,7 @@ class ASR(ASRBase):
         ret = os.system("ffmpeg -i " + audio_file + " -ar 16000 -ac 1 -t 00:00:30 " + new_file)
         if ret:
             print("Ffmpeg convert error")
-            return "error second"
+            return "-"
         text = self.pipe(new_file)["text"]
         text.lower()
         text = re.sub(r'[.,"\'\-?:!;]', '', text)
