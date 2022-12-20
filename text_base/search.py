@@ -7,6 +7,7 @@ import nltk
 from collections import defaultdict
 from math import log
 import json
+from random import randint
 
 cntFall = 0
 
@@ -61,6 +62,16 @@ class Searcher(BaseSearcher):
         except:
             return ""
 
+    def _process_words(self, words, id):
+        self._total_amount_words[id] = len(words)
+        count_words = defaultdict(int)
+        for word in words:
+            count_words[word] += 1
+        for word, amount in count_words.items():
+            self.tf_index[word].append((id, amount))
+            self._df[word] = self._df[word] + amount
+            self._amount_word[id][word] += amount
+
     def create_structure(self):
         """
         Создает индекс документов путь до документа -> номер
@@ -90,11 +101,14 @@ class Searcher(BaseSearcher):
             for author in authors:
                 songs = os.listdir(os.path.join(self.base_path, letter, author))
                 for song in songs:
+                    if song[0] == '.':
+                        continue
+
                     try:
                         path_to_song = os.path.join(self.base_path, letter, author, song)
-                        song_csv = pd.read_csv(path_to_song, sep='ÿ', engine='python')
+                        song_csv = pd.read_csv(path_to_song, sep='ÿ', engine='python', quoting=3)
 
-                        sentance = ' '.join(song_csv['eng'])
+                        sentance = ' '.join(song_csv['eng'].astype(str))
                         words = self._tokenize(sentance)
                         self._process_words(words, current_song_id)
 
@@ -109,10 +123,9 @@ class Searcher(BaseSearcher):
         json.dump(self._id_song, open("text_base/data/_id_song.json", 'w'))
         json.dump(self.idf_index, open("text_base/data/idf_index.json", 'w'))
         json.dump(self._amount_word, open("text_base/data/_amount_word.json", 'w'))
-        json.dump(self._total_amount_words, open("/text_base/data/_total_amount_words.json", 'w'))
+        json.dump(self._total_amount_words, open("text_base/data/_total_amount_words.json", 'w'))
         json.dump(self.tf_index, open("text_base/data/tf_index.json", 'w'))
         json.dump(self._df, open("text_base/data/_df.json", 'w'))
-
 
     def find(self, query) -> SearchAnswer:
         words = self._tokenize(query)
