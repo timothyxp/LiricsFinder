@@ -1,17 +1,14 @@
 from typing import List, Tuple, Dict, Optional
-# from dataclasses import dataclass
 from text_base.base import BaseSearcher
-# import pymorphy2
-# import json
-# from .utils import get_document
-# from collections import Counter
 from text_base.base import SearchAnswer
 import os
 import pandas as pd
-# from gensim.utils import tokenize
 import nltk
 from collections import defaultdict
 from math import log
+import json
+
+cntFall = 0
 
 
 class Searcher(BaseSearcher):
@@ -75,6 +72,20 @@ class Searcher(BaseSearcher):
         Создает индекс документов путь до документа -> номер
         поддерживает топ термы в top_terms
         """
+        os.makedirs("text_base/data", exist_ok=True)
+        if os.path.exists('text_base/data/top_terms.json'):
+            self.top_terms = json.load(open("text_base/data/top_terms.json"))
+            for id, path in json.load(open("text_base/data/_id_song.json")).items():
+                self._id_song[id] = path
+            for word, idf in json.load(open("text_base/data/idf_index.json")).items():
+                self.idf_index[word] = idf
+            for id, dict in json.load(open("text_base/data/_amount_word.json")).items():
+                for word, amount in dict.items():
+                    self._amount_word[id][word] = amount
+            for word, amount in json.load(open("text_base/data/_total_amount_words.json")).items():
+                self._total_amount_words[word] = amount
+            return
+
         current_song_id = 0
 
         for letter in os.listdir(self.base_path):
@@ -82,16 +93,28 @@ class Searcher(BaseSearcher):
             for author in authors:
                 songs = os.listdir(os.path.join(self.base_path, letter, author))
                 for song in songs:
-                    path_to_song = os.path.join(self.base_path, letter, author, song)
-                    song_csv = pd.read_csv(path_to_song, sep='ÿ', engine='python')
+                    try:
+                        path_to_song = os.path.join(self.base_path, letter, author, song)
+                        song_csv = pd.read_csv(path_to_song, sep='ÿ', engine='python')
 
-                    sentance = ' '.join(song_csv['eng'])
-                    words = self._tokenize(sentance)
-                    self._process_words(words, current_song_id)
+                        sentance = ' '.join(song_csv['eng'])
+                        words = self._tokenize(sentance)
+                        self._process_words(words, current_song_id)
 
-                    self._id_song[current_song_id] = path_to_song
-                    current_song_id += 1
+                        self._id_song[current_song_id] = path_to_song
+                        current_song_id += 1
+                    except:
+                        global cntFall
+                        cntFall += 1
         self._calc_idf()
+
+        json.dump(self.top_terms, open("text_base/data/top_terms.json", 'w'))
+        json.dump(self._id_song, open("text_base/data/_id_song.json", 'w'))
+        json.dump(self.idf_index, open("text_base/data/idf_index.json", 'w'))
+        json.dump(self._amount_word, open("text_base/data/_amount_word.json", 'w'))
+        json.dump(self._total_amount_words, open("/text_base/data/_total_amount_words.json", 'w'))
+        json.dump(self.tf_index, open("text_base/data/tf_index.json", 'w'))
+        json.dump(self._df, open("text_base/data/_df.json", 'w'))
 
     def _get_tf_idf(self, t, id):
         return self._get_tf(t, id) * self.idf_index[t]
@@ -116,6 +139,6 @@ class Searcher(BaseSearcher):
 
 # example
 if __name__ == "__main__":
-    searcher = Searcher(r"C:\Users\pczyg\sirius\shizam\song_pages\songs")
+    searcher = Searcher('/home/tim0th/songs_csv/')
 
-    print(searcher.find("black star"))
+    print(searcher.find("never gonna give you up never gonna give around"), cntFall)
