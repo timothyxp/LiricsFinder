@@ -7,6 +7,7 @@ import nltk
 from collections import defaultdict
 from math import log
 import json
+import re
 from projectUtils import read_song_csv
 
 cntFall = 0
@@ -22,8 +23,8 @@ class Searcher(BaseSearcher):
     _mean_amount_words: float
     _stopWords: set[str]
 
-    def __init__(self, base_path: str, index_path: str = ""):
-        super().__init__(base_path, index_path)
+    def __init__(self, base_path: str, cache_path: str = ""):
+        super().__init__(base_path, cache_path)
         self._top_terms = list()
         self._top_k = 5
         self._df = defaultdict(int)
@@ -53,6 +54,7 @@ class Searcher(BaseSearcher):
 
     def _tokenize(self, s):
         try:
+            s = re.sub(r'[^\w\s]','', s).lower()
             lemmatizer = nltk.stem.WordNetLemmatizer()
             word_list = nltk.word_tokenize(s)
             striped_word_list = [lemmatizer.lemmatize(w) for w in word_list]
@@ -67,7 +69,7 @@ class Searcher(BaseSearcher):
         for word in words:
             count_words[word] += 1
         for word, amount in count_words.items():
-            self._df[word] = self._df[word] + amount
+            self._df[word] += 1
             self._amount_word[id][word] += amount
 
     def create_structure(self):
@@ -75,16 +77,16 @@ class Searcher(BaseSearcher):
         Создает индекс документов путь до документа -> номер
         поддерживает топ термы в top_terms
         """
-        os.makedirs("text_base/data", exist_ok=True)
-        if os.path.exists('text_base/data/_top_terms.json'):
+        os.makedirs(self.cache_path, exist_ok=True)
+        if os.path.exists(os.path.join(self.cache_path, '_top_terms.json')):
             try:
-                self._top_terms = json.load(open("text_base/data/_top_terms.json"))
-                for id, path in json.load(open("text_base/data/_id_song.json")).items():
+                self._top_terms = json.load(open(os.path.join(self.cache_path, '_top_terms.json')))
+                for id, path in json.load(open(os.path.join(self.cache_path, '_id_song.json'))).items():
                     self._id_song[id] = path
-                for id, dict in json.load(open("text_base/data/_amount_word.json")).items():
+                for id, dict in json.load(open(os.path.join(self.cache_path, '_amount_word.json'))).items():
                     for word, amount in dict.items():
                         self._amount_word[id][word] = amount
-                for word, amount in json.load(open("text_base/data/_total_amount_words.json")).items():
+                for word, amount in json.load(open(os.path.join(self.cache_path, '_total_amount_words.json'))).items():
                     self._total_amount_words[word] = amount
                 self._mean_amount_words = sum(self._total_amount_words.values()) / len(self._total_amount_words)
                 return
@@ -116,10 +118,10 @@ class Searcher(BaseSearcher):
         self._calc_top_terms()
         self._mean_amount_words = sum(self._total_amount_words.values()) / len(self._total_amount_words)
 
-        json.dump(self._top_terms, open("text_base/data/_top_terms.json", 'w'))
-        json.dump(self._id_song, open("text_base/data/_id_song.json", 'w'))
-        json.dump(self._amount_word, open("text_base/data/_amount_word.json", 'w'))
-        json.dump(self._total_amount_words, open("text_base/data/_total_amount_words.json", 'w'))
+        json.dump(self._top_terms, open(os.path.join(self.cache_path, '_top_terms.json'), 'w'))
+        json.dump(self._id_song, open(os.path.join(self.cache_path, '_id_song.json'), 'w'))
+        json.dump(self._amount_word, open(os.path.join(self.cache_path, '_amount_word.json'), 'w'))
+        json.dump(self._total_amount_words, open(os.path.join(self.cache_path, '_total_amount_words.json'), 'w'))
 
     def find(self, query) -> SearchAnswer:
         words = self._tokenize(query)
@@ -138,9 +140,8 @@ class Searcher(BaseSearcher):
             answer.documents.append(self._id_song[id])
         return answer
 
-
 # example
 if __name__ == "__main__":
-    searcher = Searcher('/home/tim0th/songs_csv_2/')
+    searcher = Searcher(r'C:\Users\pczyg\sirius\shizam\song_pages\songs', 'cache/bm25')
 
     print(searcher.find("never gonna give you up"), cntFall)
