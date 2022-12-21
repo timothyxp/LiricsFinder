@@ -1,39 +1,39 @@
 from text_base.search import Searcher
 from text_base.base import SearchAnswer
-import csv
-import os.path
+import pandas as pd
 
 
 class SQE(Searcher):
     def __init__(self, path_to_csv: str):
-        super().__init__('/home/tim0th/songs_csv_2/')
+        super().__init__('/home/tim0th/songs_csv_2/', 'cashe/')
         self.path = path_to_csv
-        self.cnt = 0
-        if os.path.exists(self.path):
-            with open(self.path, 'r', newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter='↕')
-                for row in reader:
-                    self.cnt += 1
-
-    def add_elem_to_query(self, text: str, path_to_answer: str):
-        with open(self.path, 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter='↕')
-            writer.writerow({text, path_to_answer})
-            csvfile.close()
-        self.cnt += 1
 
     def get_SQE(self):
         k = 0
-        with open(self.path, 'r', newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter='↕')
-            for row in reader:
-                text = row[0]
-                answer = row[1]
-                ret = SearchAnswer
-                ret = super().find(text)
-                for i in range(5):
-                    if ret.documents[i] == answer:
-                        k += (6 - i - 1)
-                        print(ret.documents[i])
-        return k / max(1, self.cnt)
-
+        fk = 0
+        stk = 0
+        ffk = 0
+        mar = 0
+        excel_data = pd.read_excel(self.path, sheet_name='Sheet1')
+        query, result = excel_data['query'].tolist(), excel_data['result'].tolist()
+        for j in range(0, len(query)):
+            text = query[j]
+            answer = result[j]
+            ret = SearchAnswer
+            ret = super().find(text)
+            for i in range(5):
+                if ret.documents[i] == answer:
+                    mar += 1 / (1 + i)
+                    k += 1
+                    if i == 0:
+                        fk += 1
+                    elif i < 3:
+                        stk += 1
+                    else:
+                        ffk += 1
+                    # print(ret.documents[i])
+        print(k / max(1, len(query)))
+        print(fk / max(1, len(query)))
+        print(stk / max(1, len(query)))
+        print(ffk / max(1, len(query)))
+        print(mar / max(1, len(query)))
