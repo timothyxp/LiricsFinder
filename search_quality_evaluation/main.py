@@ -5,7 +5,7 @@ import csv
 
 class SQE(Searcher):
     def __init__(self, path_to_csv: str):
-        super().__init__('/home/tim0th/songs_csv/')
+        super().__init__('/home/tim0th/songs_csv_2/')
         self.path = path_to_csv
         self.cnt = 0
         fl = open(self.path, 'w', newline='')
@@ -33,5 +33,5 @@ class SQE(Searcher):
                 for i in range(5):
                     if ret.documents[i] == answer:
                         k += i
-                return k / self.cnt
+        return k / self.cnt
 
