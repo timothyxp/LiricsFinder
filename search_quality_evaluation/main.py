@@ -33,5 +33,5 @@ class SQE(Searcher):
                 for i in range(5):
                     if ret.documents[i] == answer:
                         k += i
-        return k / min(1, self.cnt)
+        return k / max(1, self.cnt)
 
