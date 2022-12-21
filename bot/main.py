@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from nn.ASR_getter import get_asr
 from datetime import datetime
 import pandas as pd
+from projectUtils import read_song_csv
 
 config = None
 token_path = "token.txt"
@@ -21,12 +22,14 @@ config = Config(
     index_path=args.index_path,
     test=args.test
 )
+endl = "\n"
 error_audio = "Извините, это аудио не может быть обработано"
 error_document = "Извините, этот документ не может быть обработан"
 searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
 dp = Dispatcher(bot)
+symbols = 3900
 sticker_SenyaHelp = "CAACAgIAAxkBAAIBAmOgGKblmyol1Ml3HzOUxUqTZLrZAAK5IgAC6VUFGKhTf2tl6fwtLAQ"
 sticker_SenyaMusic = "CAACAgIAAxkBAAN5Y52tuoIT0mE8rt19HKjlslleG0AAArIiAALpVQUYK_iXa_VksY8sBA"
 sticker_SenyaError = "CAACAgIAAxkBAAN8Y52twNjVEmXy3MjiLyNuOdNg1KIAArEiAALpVQUY3ngpjigXTOEsBA"
@@ -46,6 +49,14 @@ sticker_SearchAnswer = [sticker_SenyaMusic,
                         sticker_SenyaMiB,
                         sticker_SenyaDance,
                         sticker_SenyaMinigun]
+
+
+def bold(s):
+    return "<b>" + str(s) + "</b>"
+
+
+def italic(s):
+    return "<i>" + str(s) + "</i>"
 
 
 async def handle_voice(message: types.Message, func, error_message):
@@ -70,8 +81,35 @@ async def help(message: types.Message):
 
 
 async def send_text(message: types.Message, song_path):
-    song = pd.read_csv(song_path, delimiter='ÿ')
-    await message.answer(song)
+    song = read_song_csv(song_path)
+    print(song)
+    eng = song["eng"].values.tolist()
+    rus = song["rus"].values.tolist()
+    out = ""
+    out += bold(eng[0]) + endl
+    list_out = []
+    for i in range(1, len(eng)):
+        r = ""
+        e = ""
+        if len(rus) > i:
+            r = italic(rus[i])
+            if r == "nan":
+                r = ""
+            else:
+                r += endl
+        if len(eng) > i:
+            e = bold(eng[i])
+            if e == "nan":
+                e = ""
+            else:
+                e += endl
+        out += bold(eng[i]) + endl + r
+        if len(out) > symbols:
+            list_out.append(out)
+            out = ""
+    list_out.append(out)
+    for i in list_out:
+        await message.answer(i, parse_mode='HTML')
 
 
 @dp.message_handler(content_types=[types.ContentType.STICKER])
@@ -106,7 +144,7 @@ async def voice(message: types.Message):
 async def audio(message: types.Message):
     await handle_voice(message, message.audio.download, error_audio)
 
-    
+
 @dp.message_handler(content_types=[types.ContentType.DOCUMENT])
 async def document(message: types.Message):
     await handle_voice(message, message.document.download, error_document)
@@ -117,6 +155,7 @@ async def text(message: types.Message):
     text_response = message.text
     search_response = searcher.find(text_response).documents
     await send_text(message, search_response[0])
+    await message.answer(search_response)
 
 
 if __name__ == "__main__":

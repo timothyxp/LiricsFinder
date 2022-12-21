@@ -23,8 +23,8 @@ class Searcher(BaseSearcher):
     _mean_amount_words: float
     _stopWords: set[str]
 
-    def __init__(self, base_path: str, index_path: str = ""):
-        super().__init__(base_path, index_path)
+    def __init__(self, base_path: str, cache_path: str):
+        super().__init__(base_path, cache_path)
         self._top_terms = list()
         self._top_k = 5
         self._df = defaultdict(int)
