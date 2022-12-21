@@ -1,6 +1,7 @@
 from text_base.search import Searcher
 from text_base.base import SearchAnswer
 import csv
+import os.path
 
 
 class SQE(Searcher):
@@ -8,11 +9,11 @@ class SQE(Searcher):
         super().__init__('/home/tim0th/songs_csv_2/')
         self.path = path_to_csv
         self.cnt = 0
-        fl = open(self.path, 'w', newline='')
-        with open(self.path, 'r', newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter='↕')
-            for row in reader:
-                self.cnt += 1
+        if os.path.exists(self.path):
+            with open(self.path, 'r', newline='') as csvfile:
+                reader = csv.reader(csvfile, delimiter='↕')
+                for row in reader:
+                    self.cnt += 1
 
     def add_elem_to_query(self, text: str, path_to_answer: str):
         with open(self.path, 'a', newline='') as csvfile:
@@ -32,6 +33,7 @@ class SQE(Searcher):
                 ret = super().find(text)
                 for i in range(5):
                     if ret.documents[i] == answer:
-                        k += i
+                        k += (6 - i - 1)
+                        print(ret.documents[i])
         return k / max(1, self.cnt)
 
