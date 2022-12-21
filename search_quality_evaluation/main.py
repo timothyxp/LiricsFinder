@@ -1,9 +1,9 @@
-from text_base.search import Searcher
+from text_base.combo import L2Searcher
 from text_base.base import SearchAnswer
 import pandas as pd
 
 
-class SQE(Searcher):
+class SQE(L2Searcher):
     def __init__(self, path_to_csv: str):
         super().__init__('/home/tim0th/songs_csv_2/', 'cashe/')
         self.path = path_to_csv
