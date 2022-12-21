@@ -6,6 +6,7 @@ from nn.ASR_getter import get_asr
 from datetime import datetime
 import pandas as pd
 from projectUtils import read_song_csv
+from database.database import DataBase
 
 config = None
 token_path = "token.txt"
@@ -20,8 +21,10 @@ args = parser.parse_args()
 config = Config(
     database_path=args.database_path,
     index_path=args.index_path,
-    test=args.test
+    test=args.test,
+    user_story_database_path="/home/tim0th/db/database.json"
 )
+base = DataBase(config.user_story_database_path)
 endl = "\n"
 error_audio = "Извините, это аудио не может быть обработано"
 error_document = "Извините, этот документ не может быть обработан"
@@ -59,19 +62,28 @@ def italic(s):
     return "<i>" + str(s) + "</i>"
 
 
+rnan = italic("nan")
+enan = bold("nan")
+
+
 async def handle_voice(message: types.Message, func, error_message):
     name = str(datetime.now())
     name = name[:10] + name[11:]
+    b = 0
+    if error_message == error_audio:
+        b = 1
     await func(destination_file="./oga/" + name)
     asr_response = asr.transcribe("./oga/" + name)
     if asr_response == "-":
         await message.answer_sticker(sticker_SenyaError)
         await message.answer(error_message)
+        base.save_log(message.from_user.id, message.chat.id, "-", b, not b, "", "ОШИБКА ASR")
     else:
         search_response = searcher.find(asr_response).documents
         await message.answer(asr_response)
         await message.answer(search_response)
         await send_text(message, search_response[0])
+        base.save_log(message.from_user.id, message.chat.id, asr_response, b, not b, "", search_response)
 
 
 async def help(message: types.Message):
@@ -82,7 +94,6 @@ async def help(message: types.Message):
 
 async def send_text(message: types.Message, song_path):
     song = read_song_csv(song_path)
-    print(song)
     eng = song["eng"].values.tolist()
     rus = song["rus"].values.tolist()
     out = ""
@@ -93,17 +104,17 @@ async def send_text(message: types.Message, song_path):
         e = ""
         if len(rus) > i:
             r = italic(rus[i])
-            if r == "nan":
+            if r == rnan:
                 r = ""
             else:
                 r += endl
         if len(eng) > i:
             e = bold(eng[i])
-            if e == "nan":
+            if e == enan:
                 e = ""
             else:
                 e += endl
-        out += bold(eng[i]) + endl + r
+        out += e + r + endl
         if len(out) > symbols:
             list_out.append(out)
             out = ""
@@ -122,6 +133,7 @@ async def sticker(message: types.Message):
 async def start(message: types.Message):
     await message.answer_sticker(sticker_SenyaHi)
     await help(message)
+    base.save_log(message.from_user.id, message.chat.id, "", 0, 0, "/start", "")
 
 
 @dp.message_handler(commands=["help"])
@@ -133,6 +145,7 @@ async def hell(message: types.Message):
 @dp.message_handler(commands=["top5"])
 async def top5(message: types.Message):
     await message.answer("5")
+    base.save_log(message.from_user.id, message.chat.id, "", 0, 0, "/top5", "")
 
 
 @dp.message_handler(content_types=[types.ContentType.VOICE])
@@ -156,6 +169,7 @@ async def text(message: types.Message):
     search_response = searcher.find(text_response).documents
     await send_text(message, search_response[0])
     await message.answer(search_response)
+    base.save_log(message.from_user.id, message.chat.id, text_response, 0, 0, "text", search_response)
 
 
 if __name__ == "__main__":
