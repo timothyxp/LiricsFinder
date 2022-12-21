@@ -7,6 +7,7 @@ import nltk
 from collections import defaultdict
 from math import log
 import json
+import re
 from projectUtils import read_song_csv
 
 cntFall = 0
@@ -53,6 +54,7 @@ class Searcher(BaseSearcher):
 
     def _tokenize(self, s):
         try:
+            s = re.sub(r'[^\w\s]','', s).lower()
             lemmatizer = nltk.stem.WordNetLemmatizer()
             word_list = nltk.word_tokenize(s)
             striped_word_list = [lemmatizer.lemmatize(w) for w in word_list]
@@ -67,7 +69,7 @@ class Searcher(BaseSearcher):
         for word in words:
             count_words[word] += 1
         for word, amount in count_words.items():
-            self._df[word] = self._df[word] + amount
+            self._df[word] += 1
             self._amount_word[id][word] += amount
 
     def create_structure(self):
@@ -141,6 +143,6 @@ class Searcher(BaseSearcher):
 
 # example
 if __name__ == "__main__":
-    searcher = Searcher('/home/tim0th/songs_csv_2/')
+    searcher = Searcher(r'C:\Users\pczyg\sirius\shizam\song_pages\songs')
 
     print(searcher.find("never gonna give you up"), cntFall)
