@@ -1,4 +1,7 @@
+import os
 from dataclasses import dataclass
+
+ROOT_PATH = os.curdir
 
 
 @dataclass
@@ -10,3 +13,7 @@ class Config:
 
     token_path: str = 'token.json'
     test: bool = False
+
+    cache_path: str = os.path.join(ROOT_PATH, "cache")
+
+    searcher: str = "bm25"

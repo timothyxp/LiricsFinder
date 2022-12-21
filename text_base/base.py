@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
@@ -12,10 +13,12 @@ class SearchAnswer:
 class BaseSearcher(ABC):
     base_path: str
     index_path: str
+    cache_path: str
 
-    def __init__(self, base_path: str, index_path: str):
+    def __init__(self, base_path: str, cache_path: str):
         self.base_path = base_path
-        self.index_path = index_path
+        self.cache_path = cache_path
+        os.makedirs(self.cache_path, exist_ok=True)
 
     @abstractmethod
     def find(self, query: str) -> SearchAnswer:
