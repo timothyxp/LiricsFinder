@@ -6,14 +6,14 @@ from text_base.search import Searcher
 
 
 class L2Searcher(BaseSearcher):
-    def __init__(self, base_path: str, cache_path: str, k: int, b: int):
+    def __init__(self, base_path: str, cache_path: str):
         super().__init__(base_path, cache_path)
 
         text_searcher_cache = os.path.join(cache_path, "text_searcher")
-        self.text_searcher = Searcher(base_path, text_searcher_cache, k, b, False)
+        self.text_searcher = Searcher(base_path, text_searcher_cache, False)
 
         author_searcher_cache = os.path.join(cache_path, "author_searcher")
-        self.author_searcher = Searcher(base_path, author_searcher_cache, k, b, True)
+        self.author_searcher = Searcher(base_path, author_searcher_cache, True)
 
     def find(self, query: str) -> SearchAnswer:
         text_searcher_answer = self.text_searcher.find(query)
@@ -31,5 +31,5 @@ class L2Searcher(BaseSearcher):
 
 
 if __name__ == "__main__":
-    searcher = L2Searcher('/home/tim0th/songs_csv_2/', 'cache', 1, 0.2)
+    searcher = L2Searcher('/home/tim0th/songs_csv_2/', 'cache')
     print(searcher.find("back in black"), sep='\n')
