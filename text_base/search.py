@@ -22,9 +22,11 @@ class Searcher(BaseSearcher):
     _amount_word: defaultdict[int, defaultdict[str, int]]
     _mean_amount_words: float
     _stopWords: set[str]
+    name_search: bool
 
-    def __init__(self, base_path: str, cache_path: str = ""):
+    def __init__(self, base_path: str, cache_path: str = "", name_search: bool = False):
         super().__init__(base_path, cache_path)
+        self.name_search = name_search
         self._top_terms = list()
         self._top_k = 5
         self._df = defaultdict(int)
@@ -38,27 +40,29 @@ class Searcher(BaseSearcher):
     def _calc_top_terms(self):
         terms = list(sorted(self._df.items(), key=lambda x: x[1], reverse=True))
         for term in terms:
-            self._top_terms.append(terms[0])
+            self._top_terms.append(term[0])
 
     def _get_idf(self, word):
         N = len(self._amount_word)
         return log((N - self._df[word] + 0.5) / (self._df[word] + 0.5))
 
     def _get_tf(self, t, id):
+        k, b = 0.1, 2
         tf = self._amount_word[id][t]
         alpha = self._total_amount_words[id] / self._mean_amount_words
-        return tf / (tf + 2 * alpha)
+        return tf / (tf + k * (1 - b + b * alpha))
 
     def _get_tf_idf(self, t, id):
         return self._get_tf(t, id) * self._get_idf(t)
 
     def _tokenize(self, s):
         try:
-            s = re.sub(r'[^\w\s]','', s).lower()
+            s = re.sub(r'[^\w\s]', '', s).lower()
             lemmatizer = nltk.stem.WordNetLemmatizer()
             word_list = nltk.word_tokenize(s)
             striped_word_list = [lemmatizer.lemmatize(w) for w in word_list]
-            striped_word_list = [word for word in striped_word_list if word not in self._stopWords]
+            if not self.name_search:
+                striped_word_list = [word for word in striped_word_list if word not in self._stopWords]
             return striped_word_list
         except:
             return ""
@@ -91,6 +95,10 @@ class Searcher(BaseSearcher):
                 self._mean_amount_words = sum(self._total_amount_words.values()) / len(self._total_amount_words)
                 return
             except:
+                self._top_terms = list()
+                self._id_song = defaultdict()
+                self._amount_word = defaultdict(lambda: defaultdict(int))
+                self._total_amount_words = defaultdict(int)
                 print('FALL_DOWNLOAD')
 
         current_song_id = 0
@@ -106,7 +114,10 @@ class Searcher(BaseSearcher):
                         path_to_song = os.path.join(self.base_path, letter, author, song)
                         song_csv = read_song_csv(path_to_song)
 
-                        sentance = ' '.join(song_csv['eng'].astype(str))
+                        if self.name_search:
+                            sentance = ' '.join(song_csv['eng'].astype(str)[0:2])
+                        else:
+                            sentance = ' '.join(song_csv['eng'].astype(str))
                         words = self._tokenize(sentance)
                         self._process_words(words, current_song_id)
 
@@ -125,7 +136,8 @@ class Searcher(BaseSearcher):
 
     def find(self, query) -> SearchAnswer:
         words = self._tokenize(query)
-        words = [word for word in words if word not in self._top_terms]
+        if not self.name_search:
+            words = [word for word in words if word not in self._top_terms[0:21]]
         song_score = list()
         for id in self._id_song.keys():
             score = 0
@@ -134,14 +146,15 @@ class Searcher(BaseSearcher):
             song_score.append((score, id))
         song_score.sort(reverse=True)
 
-        answer = SearchAnswer([])
+        answer = SearchAnswer([], [])
         for i in range(self._top_k):
-            id = song_score[i][1]
+            idf, id = song_score[i]
             answer.documents.append(self._id_song[id])
+            answer.idf.append(idf)
         return answer
+
 
 # example
 if __name__ == "__main__":
-    searcher = Searcher(r'C:\Users\pczyg\sirius\shizam\song_pages\songs', 'cache/bm25')
-
-    print(searcher.find("never gonna give you up"), cntFall)
+    searcher = Searcher('/home/tim0th/songs_csv_2/', 'cache/authors', 1)
+    print(searcher.find("around the world"), cntFall)

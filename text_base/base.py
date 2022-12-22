@@ -7,6 +7,7 @@ from typing import List
 @dataclass
 class SearchAnswer:
     documents: List[str]
+    idf: List[float]
     # documents path
 
 
