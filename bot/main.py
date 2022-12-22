@@ -2,11 +2,13 @@ from config import Config
 import argparse
 from text_base.search_getter import get_searcher
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from nn.ASR_getter import get_asr
 from datetime import datetime
 import pandas as pd
 from projectUtils import read_song_csv
 from database.database import DataBase
+from aiogram.utils.callback_data import CallbackData
 
 config = None
 token_path = "token.txt"
@@ -16,7 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--database_path")
 parser.add_argument("--index_path")
 parser.add_argument("--test", action="store_true", default=False)
-
+query_history = {}
 args = parser.parse_args()
 config = Config(
     database_path=args.database_path,
@@ -24,6 +26,7 @@ config = Config(
     test=args.test,
     user_story_database_path="/home/tim0th/db/database.json"
 )
+db = dict()
 base = DataBase(config.user_story_database_path)
 endl = "\n"
 error_audio = "Извините, это аудио не может быть обработано"
@@ -32,6 +35,7 @@ searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
 dp = Dispatcher(bot)
+top5 = CallbackData("top5", "db_id", "number")
 symbols = 3900
 sticker_SenyaHelp = "CAACAgIAAxkBAAIBAmOgGKblmyol1Ml3HzOUxUqTZLrZAAK5IgAC6VUFGKhTf2tl6fwtLAQ"
 sticker_SenyaMusic = "CAACAgIAAxkBAAN5Y52tuoIT0mE8rt19HKjlslleG0AAArIiAALpVQUYK_iXa_VksY8sBA"
@@ -52,6 +56,15 @@ sticker_SearchAnswer = [sticker_SenyaMusic,
                         sticker_SenyaMiB,
                         sticker_SenyaDance,
                         sticker_SenyaMinigun]
+
+
+def author_song(song_path):
+    s = song_path.split('/')
+    a = s[-2].replace('_', ' ')
+    a = a[0].upper() + a[1:]
+    b = s[-1].replace('_', ' ')
+    b = b[0].upper() + b[1:-4]
+    return a + " - " + b
 
 
 def bold(s):
@@ -81,8 +94,8 @@ async def handle_voice(message: types.Message, func, error_message):
     else:
         search_response = searcher.find(asr_response).documents
         await message.answer(asr_response)
-        await message.answer(search_response)
-        await send_text(message, search_response[0])
+        db[len(db.keys())] = search_response
+        await send_text(message, search_response, len(db.keys()) - 1, 0)
         base.save_log(message.from_user.id, message.chat.id, asr_response, b, not b, "", search_response)
 
 
@@ -92,8 +105,8 @@ async def help(message: types.Message):
                          "/top5 - 5 наиболее вероятных переводов предыдущего запроса")
 
 
-async def send_text(message: types.Message, song_path):
-    song = read_song_csv(song_path)
+async def send_text(message: types.Message, song_paths, db_id_tmp, number_tmp):
+    song = read_song_csv(song_paths[number_tmp])
     eng = song["eng"].values.tolist()
     rus = song["rus"].values.tolist()
     out = ""
@@ -118,9 +131,46 @@ async def send_text(message: types.Message, song_path):
         if len(out) > symbols:
             list_out.append(out)
             out = ""
-    list_out.append(out)
-    for i in list_out:
-        await message.answer(i, parse_mode='HTML')
+    if (out != ""):
+        list_out.append(out)
+
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton(text=author_song(song_paths[0]),
+                             callback_data=top5.new(
+                                 db_id=db_id_tmp,
+                                 number=0
+                             )),
+        InlineKeyboardButton(text=author_song(song_paths[1]),
+                             callback_data=top5.new(
+                                 db_id=db_id_tmp,
+                                 number=1
+                             )),
+        InlineKeyboardButton(text=author_song(song_paths[2]),
+                             callback_data=top5.new(
+                                 db_id=db_id_tmp,
+                                 number=2
+                             )),
+        InlineKeyboardButton(text=author_song(song_paths[3]),
+                             callback_data=top5.new(
+                                 db_id=db_id_tmp,
+                                 number=3
+                             )),
+        InlineKeyboardButton(text=author_song(song_paths[4]),
+                             callback_data=top5.new(
+                                 db_id=db_id_tmp,
+                                 number=4
+                             ))
+    )
+    for i in range(0, len(list_out) - 1):
+        await message.answer(list_out[i], parse_mode='HTML')
+    await message.answer(list_out[-1], parse_mode='HTML', reply_markup=markup)
+
+
+@dp.callback_query_handler(top5.filter())
+async def button_press(call: types.CallbackQuery, callback_data: dict):
+    db_id = int(callback_data.get('db_id'))
+    number = int(callback_data.get('number'))
+    await send_text(db[db_id][0], db[db_id][1], db_id, number)
 
 
 @dp.message_handler(content_types=[types.ContentType.STICKER])
@@ -142,11 +192,6 @@ async def hell(message: types.Message):
     await help(message)
 
 
-@dp.message_handler(commands=["top5"])
-async def top5(message: types.Message):
-    await message.answer("5")
-    base.save_log(message.from_user.id, message.chat.id, "", 0, 0, "/top5", "")
-
 
 @dp.message_handler(content_types=[types.ContentType.VOICE])
 async def voice(message: types.Message):
@@ -167,8 +212,8 @@ async def document(message: types.Message):
 async def text(message: types.Message):
     text_response = message.text
     search_response = searcher.find(text_response).documents
-    await send_text(message, search_response[0])
-    await message.answer(search_response)
+    db[len(db.keys())] = [message, search_response]
+    await send_text(message, search_response, len(db.keys()) - 1, 0)
     base.save_log(message.from_user.id, message.chat.id, text_response, 0, 0, "text", search_response)
 
 
