@@ -5,7 +5,7 @@ import pandas as pd
 
 class SQE(L2Searcher):
     def __init__(self, path_to_csv: str):
-        super().__init__('/home/tim0th/songs_csv_2/', 'cashe/')
+        super().__init__('/home/tim0th/songs_csv_2/', 'cashe')
         self.path = path_to_csv
 
     def get_SQE(self):
@@ -37,3 +37,4 @@ class SQE(L2Searcher):
         print(stk / max(1, len(query)))
         print(ffk / max(1, len(query)))
         print(mar / max(1, len(query)))
+
