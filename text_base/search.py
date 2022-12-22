@@ -24,7 +24,7 @@ class Searcher(BaseSearcher):
     _stopWords: set[str]
     name_search: bool
 
-    def __init__(self, base_path: str, cache_path: str = "", name_search: bool = False):
+    def __init__(self, base_path: str, cache_path: str, name_search: bool = False):
         super().__init__(base_path, cache_path)
         self.name_search = name_search
         self._top_terms = list()
@@ -47,7 +47,7 @@ class Searcher(BaseSearcher):
         return log((N - self._df[word] + 0.5) / (self._df[word] + 0.5))
 
     def _get_tf(self, t, id):
-        k, b = 0.1, 2
+        k, b = 1, 1
         tf = self._amount_word[id][t]
         alpha = self._total_amount_words[id] / self._mean_amount_words
         return tf / (tf + k * (1 - b + b * alpha))
@@ -61,6 +61,8 @@ class Searcher(BaseSearcher):
             lemmatizer = nltk.stem.WordNetLemmatizer()
             word_list = nltk.word_tokenize(s)
             striped_word_list = [lemmatizer.lemmatize(w) for w in word_list]
+            for i in range(1, len(striped_word_list)):
+                striped_word_list.append(striped_word_list[i - 1] + striped_word_list[i])
             if not self.name_search:
                 striped_word_list = [word for word in striped_word_list if word not in self._stopWords]
             return striped_word_list
@@ -156,5 +158,5 @@ class Searcher(BaseSearcher):
 
 # example
 if __name__ == "__main__":
-    searcher = Searcher('/home/tim0th/songs_csv_2/', 'cache/authors', 1)
-    print(searcher.find("around the world"), cntFall)
+    searcher = Searcher('/home/tim0th/songs_csv_2/', 'cache/bm25', 1)
+    print(searcher.find("ac dc back in black"), cntFall)
