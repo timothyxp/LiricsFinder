@@ -116,8 +116,8 @@ async def handle_voice(message: types.Message, func, error_message):
 
 async def help(message: types.Message):
     await message.answer("Если ты мне пришлёшь: \n" \
-                         "Текст/аудио-сообщение - получишь наиболее вероятный превод песни\n" \
-                         "/top5 - 5 наиболее вероятных переводов предыдущего запроса")
+                         "Текст/аудио-сообщение - получишь наиболее вероятный перевод песни "
+                         "и другие песни которые мы нашли на выбор")
 
 
 async def send_text(message: types.Message, song_paths, db_id_tmp, number_tmp):
