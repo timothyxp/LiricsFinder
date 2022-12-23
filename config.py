@@ -17,4 +17,5 @@ class Config:
 
     cache_path: str = os.path.join(ROOT_PATH, "cache")
 
-    searcher: str = "bm25"
+    searcher: str = "l2"
+    search_max_len: int = 40

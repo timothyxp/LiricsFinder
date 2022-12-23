@@ -25,7 +25,7 @@ class Searcher(BaseSearcher):
     name_search: bool
     _tf_index: defaultdict[str, list[tuple[int, int]]]
 
-    def __init__(self, base_path: str, cache_path: str, name_search: bool = False):
+    def __init__(self, base_path: str, cache_path: str, name_search: bool = False, search_max_len: int = 40):
         super().__init__(base_path, cache_path)
         self.name_search = name_search
         self._top_terms = list()
@@ -36,6 +36,7 @@ class Searcher(BaseSearcher):
         self._mean_amount_words = 0
         self._tf_index = defaultdict(lambda: list())
         self._stopWords = set(nltk.corpus.stopwords.words('english'))
+        self._search_max_len = search_max_len
         self.create_structure()
 
     def _calc_top_terms(self):
@@ -139,6 +140,8 @@ class Searcher(BaseSearcher):
         words = self._tokenize(query)
         if not self.name_search:
             words = [word for word in words if word not in self._top_terms[0:21]]
+
+        words = words[:self._search_max_len]
 
         song_score = defaultdict(int)
         for i in range(5):

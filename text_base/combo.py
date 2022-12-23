@@ -6,7 +6,7 @@ from text_base.search import Searcher
 
 
 class L2Searcher(BaseSearcher):
-    def __init__(self, base_path: str, cache_path: str):
+    def __init__(self, base_path: str, cache_path: str, *args, **kwargs):
         super().__init__(base_path, cache_path)
 
         text_searcher_cache = os.path.join(cache_path, "text_searcher")
