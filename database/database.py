@@ -25,4 +25,7 @@ class DataBase:
         return self.db.search(self.user.user_id == user_id)
 
     def get_user_last_query(self, user_id, chat_id):
-        return self.db.search(self.user.user_id == user_id and self.user.chat_id == chat_id)[-1]
+        try:
+            return self.db.search(self.user.user_id == user_id and self.user.chat_id == chat_id)[-1]
+        except:
+            return 0

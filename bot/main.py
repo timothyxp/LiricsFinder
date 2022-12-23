@@ -1,5 +1,8 @@
 from config import Config
 import argparse
+import asyncio
+import pytz
+from datetime import timedelta
 from text_base.search_getter import get_searcher
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -29,8 +32,10 @@ config = Config(
 db = dict()
 base = DataBase(config.user_story_database_path)
 endl = "\n"
+message_time_delta = timedelta(seconds=config.user_message_time_delta)
 error_audio = "Извините, это аудио не может быть обработано"
 error_document = "Извините, этот документ не может быть обработан"
+size_error = "Размер отправленного файла слишком большой"
 searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
@@ -85,7 +90,17 @@ async def handle_voice(message: types.Message, func, error_message):
     b = 0
     if error_message == error_audio:
         b = 1
-    await func(destination_file="./oga/" + name)
+    last_query = base.get_user_last_query(message.from_user.id, message.chat.id)
+    if last_query != 0:
+        if datetime.now() < message_time_delta + datetime.strptime(last_query['date_time'], '%Y-%m-%d %H:%M:%S'):
+            return
+    try:
+        await func(destination_file="./oga/" + name, timeout=1)
+    except asyncio.exceptions.TimeoutError:
+        await message.answer_sticker(sticker_SenyaError)
+        await message.answer(size_error)
+        base.save_log(message.from_user.id, message.chat.id, "-", b, not b, "", "ОШИБКА СКАЧИВАНИЯ")
+        return
     asr_response = asr.transcribe("./oga/" + name)
     if asr_response == "-":
         await message.answer_sticker(sticker_SenyaError)
@@ -210,6 +225,10 @@ async def document(message: types.Message):
 
 @dp.message_handler()
 async def text(message: types.Message):
+    last_query = base.get_user_last_query(message.from_user.id, message.chat.id)
+    if last_query != 0:
+        if datetime.now() < message_time_delta + datetime.strptime(last_query['date_time'], '%Y-%m-%d %H:%M:%S'):
+            return
     text_response = message.text
     search_response = searcher.find(text_response).documents
     db[len(db.keys())] = [message, search_response]
