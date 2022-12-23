@@ -23,19 +23,21 @@ class Searcher(BaseSearcher):
     _mean_amount_words: float
     _stopWords: set[str]
     name_search: bool
+    _tf_index: defaultdict[str, list[tuple[int, int]]]
 
-    def __init__(self, base_path: str, cache_path: str, name_search: bool = False):
+    def __init__(self, base_path: str, cache_path: str, name_search: bool = False:
         super().__init__(base_path, cache_path)
-        self.name_search = name_search
-        self._top_terms = list()
-        self._top_k = 5
-        self._df = defaultdict(int)
-        self._id_song = defaultdict(int)
-        self._total_amount_words = defaultdict(int)
-        self._mean_amount_words = 0
-        self._amount_word = defaultdict(lambda: defaultdict(int))
-        self._stopWords = set(nltk.corpus.stopwords.words('english'))
-        self.create_structure()
+
+    self.name_search = name_search
+    self._top_terms = list()
+    self._top_k = 5
+    self._df = defaultdict(int)
+    self._id_song = defaultdict(int)
+    self._total_amount_words = defaultdict(int)
+    self._mean_amount_words = 0
+    self._tf_index = defaultdict(lambda: list())
+    self._stopWords = set(nltk.corpus.stopwords.words('english'))
+    self.create_structure()
 
     def _calc_top_terms(self):
         terms = list(sorted(self._df.items(), key=lambda x: x[1], reverse=True))
@@ -43,40 +45,40 @@ class Searcher(BaseSearcher):
             self._top_terms.append(term[0])
 
     def _get_idf(self, word):
-        N = len(self._amount_word)
+        N = len(self._id_song)
         return log((N - self._df[word] + 0.5) / (self._df[word] + 0.5))
 
-    def _get_tf(self, t, id):
+    def _get_tf(self, t, _id, tf):
         k, b = 1, 1
-        tf = self._amount_word[id][t]
-        alpha = self._total_amount_words[id] / self._mean_amount_words
+        alpha = self._total_amount_words[_id] / self._mean_amount_words
         return tf / (tf + k * (1 - b + b * alpha))
 
-    def _get_tf_idf(self, t, id):
-        return self._get_tf(t, id) * self._get_idf(t)
+    def _get_tf_idf(self, t, _id, tf):
+        return self._get_tf(t, _id, tf) * self._get_idf(t)
 
     def _tokenize(self, s):
         try:
             s = re.sub(r'[^\w\s]', '', s).lower()
-            lemmatizer = nltk.stem.WordNetLemmatizer()
+            _lemmatizer = nltk.stem.WordNetLemmatizer()
             word_list = nltk.word_tokenize(s)
-            striped_word_list = [lemmatizer.lemmatize(w) for w in word_list]
+            striped_word_list = [_lemmatizer.lemmatize(w) for w in word_list]
             for i in range(1, len(striped_word_list)):
                 striped_word_list.append(striped_word_list[i - 1] + striped_word_list[i])
             if not self.name_search:
                 striped_word_list = [word for word in striped_word_list if word not in self._stopWords]
             return striped_word_list
         except:
-            return ""
+            print("FALL")
+            return list()
 
-    def _process_words(self, words, id):
-        self._total_amount_words[id] = len(words)
+    def _process_words(self, words, _id):
+        self._total_amount_words[_id] = len(words)
         count_words = defaultdict(int)
         for word in words:
             count_words[word] += 1
         for word, amount in count_words.items():
             self._df[word] += 1
-            self._amount_word[id][word] += amount
+            self._tf_index[word].append((_id, amount))
 
     def create_structure(self):
         """
@@ -87,19 +89,18 @@ class Searcher(BaseSearcher):
         if os.path.exists(os.path.join(self.cache_path, '_top_terms.json')):
             try:
                 self._top_terms = json.load(open(os.path.join(self.cache_path, '_top_terms.json')))
-                for id, path in json.load(open(os.path.join(self.cache_path, '_id_song.json'))).items():
-                    self._id_song[id] = path
-                for id, dict in json.load(open(os.path.join(self.cache_path, '_amount_word.json'))).items():
-                    for word, amount in dict.items():
-                        self._amount_word[id][word] = amount
+                for _id, path in json.load(open(os.path.join(self.cache_path, '_id_song.json'))).items():
+                    self._id_song[int(_id)] = path
+                for word, tf_list in json.load(open(os.path.join(self.cache_path, '_tf_index.json'))).items():
+                    self._tf_index[word] = tf_list
                 for word, amount in json.load(open(os.path.join(self.cache_path, '_total_amount_words.json'))).items():
-                    self._total_amount_words[word] = amount
+                    self._total_amount_words[word] = int(amount)
                 self._mean_amount_words = sum(self._total_amount_words.values()) / len(self._total_amount_words)
                 return
             except:
                 self._top_terms = list()
                 self._id_song = defaultdict()
-                self._amount_word = defaultdict(lambda: defaultdict(int))
+                self._tf_index = defaultdict(lambda: list())
                 self._total_amount_words = defaultdict(int)
                 print('FALL_DOWNLOAD')
 
@@ -126,37 +127,39 @@ class Searcher(BaseSearcher):
                         self._id_song[current_song_id] = path_to_song
                         current_song_id += 1
                     except:
-                        global cntFall
-                        cntFall += 1
+                        print("READ_CSV_FALL")
         self._calc_top_terms()
         self._mean_amount_words = sum(self._total_amount_words.values()) / len(self._total_amount_words)
 
         json.dump(self._top_terms, open(os.path.join(self.cache_path, '_top_terms.json'), 'w'))
         json.dump(self._id_song, open(os.path.join(self.cache_path, '_id_song.json'), 'w'))
-        json.dump(self._amount_word, open(os.path.join(self.cache_path, '_amount_word.json'), 'w'))
+        json.dump(self._tf_index, open(os.path.join(self.cache_path, '_tf_index.json'), 'w'))
         json.dump(self._total_amount_words, open(os.path.join(self.cache_path, '_total_amount_words.json'), 'w'))
 
     def find(self, query) -> SearchAnswer:
         words = self._tokenize(query)
         if not self.name_search:
             words = [word for word in words if word not in self._top_terms[0:21]]
-        song_score = list()
-        for id in self._id_song.keys():
-            score = 0
-            for word in words:
-                score += self._get_tf_idf(word, id)
-            song_score.append((score, id))
-        song_score.sort(reverse=True)
+
+        song_score = defaultdict(int)
+        for i in range(5):
+            song_score[i] = 0
+        for word in words:
+            if word not in self._tf_index:
+                continue
+            for _id, tf in self._tf_index[word]:
+                song_score[_id] += self._get_tf_idf(word, _id, tf)
+        song_score = sorted(song_score.items(), reverse=True, key=lambda x: x[1])
 
         answer = SearchAnswer([], [])
         for i in range(self._top_k):
-            idf, id = song_score[i]
-            answer.documents.append(self._id_song[id])
+            _id, idf = song_score[i]
+            answer.documents.append(self._id_song[_id])
             answer.idf.append(idf)
         return answer
 
 
 # example
 if __name__ == "__main__":
-    searcher = Searcher('/home/tim0th/songs_csv_2/', 'cache/bm25', 1)
+    searcher = Searcher('/home/tim0th/songs_csv_2/', 'cache/author_searcher', 1)
     print(searcher.find("ac dc back in black"), cntFall)
