@@ -25,19 +25,18 @@ class Searcher(BaseSearcher):
     name_search: bool
     _tf_index: defaultdict[str, list[tuple[int, int]]]
 
-    def __init__(self, base_path: str, cache_path: str, name_search: bool = False:
+    def __init__(self, base_path: str, cache_path: str, name_search: bool = False):
         super().__init__(base_path, cache_path)
-
-    self.name_search = name_search
-    self._top_terms = list()
-    self._top_k = 5
-    self._df = defaultdict(int)
-    self._id_song = defaultdict(int)
-    self._total_amount_words = defaultdict(int)
-    self._mean_amount_words = 0
-    self._tf_index = defaultdict(lambda: list())
-    self._stopWords = set(nltk.corpus.stopwords.words('english'))
-    self.create_structure()
+        self.name_search = name_search
+        self._top_terms = list()
+        self._top_k = 5
+        self._df = defaultdict(int)
+        self._id_song = defaultdict(int)
+        self._total_amount_words = defaultdict(int)
+        self._mean_amount_words = 0
+        self._tf_index = defaultdict(lambda: list())
+        self._stopWords = set(nltk.corpus.stopwords.words('english'))
+        self.create_structure()
 
     def _calc_top_terms(self):
         terms = list(sorted(self._df.items(), key=lambda x: x[1], reverse=True))
