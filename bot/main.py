@@ -96,7 +96,7 @@ async def handle_voice(message: types.Message, func, error_message):
             return
     try:
         await func(destination_file="./oga/" + name, timeout=1)
-    except asyncio.exceptions.TimeoutError:
+    except:
         await message.answer_sticker(sticker_SenyaError)
         await message.answer(size_error)
         base.save_log(message.from_user.id, message.chat.id, "-", b, not b, "", "ОШИБКА СКАЧИВАНИЯ")
