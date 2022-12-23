@@ -1,5 +1,6 @@
 from config import Config
 import argparse
+import asyncio
 from text_base.search_getter import get_searcher
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -31,6 +32,7 @@ base = DataBase(config.user_story_database_path)
 endl = "\n"
 error_audio = "Извините, это аудио не может быть обработано"
 error_document = "Извините, этот документ не может быть обработан"
+size_error = "Размер отправленного файла слишком большой"
 searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
@@ -85,7 +87,13 @@ async def handle_voice(message: types.Message, func, error_message):
     b = 0
     if error_message == error_audio:
         b = 1
-    await func(destination_file="./oga/" + name)
+    try:
+        await func(destination_file="./oga/" + name, timeout=1)
+    except asyncio.exceptions.TimeoutError:
+        await message.answer_sticker(sticker_SenyaError)
+        await message.answer(size_error)
+        base.save_log(message.from_user.id, message.chat.id, "-", b, not b, "", "ОШИБКА СКАЧИВАНИЯ")
+        return
     asr_response = asr.transcribe("./oga/" + name)
     if asr_response == "-":
         await message.answer_sticker(sticker_SenyaError)
