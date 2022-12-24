@@ -1,5 +1,8 @@
 from config import Config
 import argparse
+import asyncio
+import pytz
+from datetime import timedelta
 from text_base.search_getter import get_searcher
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -29,14 +32,16 @@ config = Config(
 db = dict()
 base = DataBase(config.user_story_database_path)
 endl = "\n"
+message_time_delta = timedelta(seconds=config.user_message_time_delta)
 error_audio = "Извините, это аудио не может быть обработано"
 error_document = "Извините, этот документ не может быть обработан"
+size_error = "Размер отправленного файла слишком большой"
 searcher = get_searcher(config)
 asr = get_asr(config)
 bot = Bot(token=token)
 dp = Dispatcher(bot)
 top5 = CallbackData("top5", "db_id", "number")
-symbols = 3900
+symbols = 3700
 sticker_SenyaHelp = "CAACAgIAAxkBAAIBAmOgGKblmyol1Ml3HzOUxUqTZLrZAAK5IgAC6VUFGKhTf2tl6fwtLAQ"
 sticker_SenyaMusic = "CAACAgIAAxkBAAN5Y52tuoIT0mE8rt19HKjlslleG0AAArIiAALpVQUYK_iXa_VksY8sBA"
 sticker_SenyaError = "CAACAgIAAxkBAAN8Y52twNjVEmXy3MjiLyNuOdNg1KIAArEiAALpVQUY3ngpjigXTOEsBA"
@@ -85,7 +90,17 @@ async def handle_voice(message: types.Message, func, error_message):
     b = 0
     if error_message == error_audio:
         b = 1
-    await func(destination_file="./oga/" + name)
+    last_query = base.get_user_last_query(message.from_user.id, message.chat.id)
+    if last_query != 0:
+        if datetime.now() < message_time_delta + datetime.strptime(last_query['date_time'], '%Y-%m-%d %H:%M:%S'):
+            return
+    try:
+        await func(destination_file="./oga/" + name, timeout=1)
+    except:
+        await message.answer_sticker(sticker_SenyaError)
+        await message.answer(size_error)
+        base.save_log(message.from_user.id, message.chat.id, "-", b, not b, "", "ОШИБКА СКАЧИВАНИЯ")
+        return
     asr_response = asr.transcribe("./oga/" + name)
     if asr_response == "-":
         await message.answer_sticker(sticker_SenyaError)
@@ -94,15 +109,15 @@ async def handle_voice(message: types.Message, func, error_message):
     else:
         search_response = searcher.find(asr_response).documents
         await message.answer(asr_response)
-        db[len(db.keys())] = search_response
+        db[len(db.keys())] = [message, search_response]
         await send_text(message, search_response, len(db.keys()) - 1, 0)
         base.save_log(message.from_user.id, message.chat.id, asr_response, b, not b, "", search_response)
 
 
 async def help(message: types.Message):
     await message.answer("Если ты мне пришлёшь: \n" \
-                         "Текст/аудио-сообщение - получишь наиболее вероятный превод песни\n" \
-                         "/top5 - 5 наиболее вероятных переводов предыдущего запроса")
+                         "Текст/аудио-сообщение - получишь наиболее вероятный перевод песни "
+                         "и другие песни которые мы нашли на выбор")
 
 
 async def send_text(message: types.Message, song_paths, db_id_tmp, number_tmp):
@@ -210,6 +225,10 @@ async def document(message: types.Message):
 
 @dp.message_handler()
 async def text(message: types.Message):
+    last_query = base.get_user_last_query(message.from_user.id, message.chat.id)
+    if last_query != 0:
+        if datetime.now() < message_time_delta + datetime.strptime(last_query['date_time'], '%Y-%m-%d %H:%M:%S'):
+            return
     text_response = message.text
     search_response = searcher.find(text_response).documents
     db[len(db.keys())] = [message, search_response]
