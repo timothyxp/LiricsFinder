@@ -41,7 +41,7 @@ asr = get_asr(config)
 bot = Bot(token=token)
 dp = Dispatcher(bot)
 top5 = CallbackData("top5", "db_id", "number")
-symbols = 3900
+symbols = 3700
 sticker_SenyaHelp = "CAACAgIAAxkBAAIBAmOgGKblmyol1Ml3HzOUxUqTZLrZAAK5IgAC6VUFGKhTf2tl6fwtLAQ"
 sticker_SenyaMusic = "CAACAgIAAxkBAAN5Y52tuoIT0mE8rt19HKjlslleG0AAArIiAALpVQUYK_iXa_VksY8sBA"
 sticker_SenyaError = "CAACAgIAAxkBAAN8Y52twNjVEmXy3MjiLyNuOdNg1KIAArEiAALpVQUY3ngpjigXTOEsBA"
